@@ -1,7 +1,7 @@
 # Multi-stage build for production deployment
 
 # Backend build stage
-FROM golang:1.21-alpine AS backend-builder
+FROM golang:1.24-alpine AS backend-builder
 
 # Install build dependencies
 RUN apk add --no-cache build-base
@@ -19,7 +19,7 @@ COPY backend/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -o main .
 
 # Frontend build stage
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
