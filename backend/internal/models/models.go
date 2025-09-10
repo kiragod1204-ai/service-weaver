@@ -141,8 +141,9 @@ type User struct {
 
 // LoginRequest represents a user login request
 type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username   string `json:"username" binding:"required"`
+	Password   string `json:"password" binding:"required"`
+	RememberMe bool   `json:"remember_me"`
 }
 
 // LoginResponse represents a user login response
@@ -157,4 +158,18 @@ type RegisterRequest struct {
 	Password string   `json:"password" binding:"required"`
 	Email    string   `json:"email" binding:"required,email"`
 	Role     UserRole `json:"role" binding:"required,oneof=admin viewer"`
+}
+
+// FirstRunAdminRequest represents a first-run admin setup request
+type FirstRunAdminRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+}
+
+// FirstRunAdminResponse represents a first-run admin setup response
+type FirstRunAdminResponse struct {
+	Message string `json:"message"`
+	User    User   `json:"user"`
+	Token   string `json:"token"`
 }

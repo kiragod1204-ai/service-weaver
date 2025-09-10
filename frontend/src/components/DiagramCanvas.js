@@ -13,6 +13,7 @@ import 'reactflow/dist/style.css';
 import useStore from '../store/useStore';
 import ServiceNode from './ServiceNode';
 import ServiceEdge from './ServiceEdge';
+import { Copy } from 'lucide-react';
 
 const nodeTypes = {
   service: ServiceNode,
@@ -35,7 +36,10 @@ const DiagramCanvas = () => {
     deleteService, // Added deleteService
     loadPositionsFromStorage,
     savePositionsToBackend,
-    currentDiagram // Added currentDiagram
+    currentDiagram, // Added currentDiagram
+    updateService, // Added updateService
+    setCopiedService, // Added for copy/paste
+    pasteService // Added for copy/paste
   } = useStore();
   
   const [selectedEdge, setSelectedEdge] = useState(null);
@@ -43,6 +47,8 @@ const DiagramCanvas = () => {
   const eKeyPressed = useKeyPress('e');
   const pKeyPressed = useKeyPress('p');
   const escapePressed = useKeyPress('Escape');
+  const ctrlCPressed = useKeyPress(['Control+c', 'Meta+c']); // For Windows/Linux and macOS
+  const ctrlVPressed = useKeyPress(['Control+v', 'Meta+v']); // For Windows/Linux and macOS
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
@@ -52,8 +58,11 @@ const DiagramCanvas = () => {
       id: service.id.toString(),
       type: 'service',
       position: { x: service.position_x, y: service.position_y },
-      data: { service },
-    })), [services]
+      data: { 
+        service,
+        onServiceUpdate: updateService 
+      },
+    })), [services, updateService]
   );
 
   // Convert connections to React Flow edges
@@ -76,7 +85,10 @@ const DiagramCanvas = () => {
       id: service.id.toString(),
       type: 'service',
       position: { x: service.position_x, y: service.position_y },
-      data: { service },
+      data: { 
+        service,
+        onServiceUpdate: updateService 
+      },
     }));
     
     // Only update if nodes have actually changed
@@ -84,7 +96,7 @@ const DiagramCanvas = () => {
       const nodesChanged = JSON.stringify(currentNodes) !== JSON.stringify(newNodes);
       return nodesChanged ? newNodes : currentNodes;
     });
-  }, [services, setNodes]);
+  }, [services, setNodes, updateService]);
 
   // Update edges when connections change
   useEffect(() => {
@@ -202,6 +214,22 @@ const DiagramCanvas = () => {
       setSelectedService(null);
     }
   }, [escapePressed, setSelectedService]);
+
+  // Handle Ctrl+C (Copy)
+  useEffect(() => {
+    if (ctrlCPressed && selectedService) {
+      setCopiedService(selectedService);
+      // Optional: Provide user feedback
+      console.log('Service copied:', selectedService.name);
+    }
+  }, [ctrlCPressed, selectedService, setCopiedService]);
+
+  // Handle Ctrl+V (Paste)
+  useEffect(() => {
+    if (ctrlVPressed) {
+      pasteService();
+    }
+  }, [ctrlVPressed, pasteService]);
 
   // Load positions from localStorage when services are loaded
   useEffect(() => {

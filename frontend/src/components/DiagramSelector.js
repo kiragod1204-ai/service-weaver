@@ -2,11 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Trash2, Edit2, Search, Calendar, FileText } from 'lucide-react';
 import useStore from '../store/useStore';
 
-const DiagramSelector = () => {
+const DiagramSelector = ({ onDiagramSelect }) => {
   const {
     diagrams,
     currentDiagram,
-    loadDiagram,
     deleteDiagram,
     updateDiagram
   } = useStore();
@@ -17,7 +16,7 @@ const DiagramSelector = () => {
   const [filterBy, setFilterBy] = useState('all'); // 'all', 'name', 'description', 'date'
 
   const handleSelectDiagram = (diagram) => {
-    loadDiagram(diagram.id);
+    onDiagramSelect(diagram.id);
   };
 
   const handleEditStart = (diagram, e) => {

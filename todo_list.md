@@ -1,0 +1,7 @@
+- [x] Analyze existing node handling in ServiceNode.js and DiagramCanvas.js
+- [x] Review state management in useStore.js for node data
+- [x] Implement copy functionality (store node data)
+- [x] Implement paste functionality (create new node from copied data)
+- [x] Add UI controls (e.g., context menu or buttons) for copy/paste
+- [x] Test copy/paste functionality
+- [x] Verify results and handle edge cases

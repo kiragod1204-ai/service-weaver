@@ -6,6 +6,7 @@ import (
 	"service-weaver/internal/models"
 
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Repository struct {
@@ -56,7 +57,7 @@ func (r *Repository) createTables() error {
 			name VARCHAR(255) NOT NULL,
 			description TEXT,
 			service_type VARCHAR(50) NOT NULL,
-			icon VARCHAR(100),
+			icon TEXT,
 			host VARCHAR(255),
 			port INTEGER,
 			tags TEXT,
@@ -134,6 +135,12 @@ func (r *Repository) createTables() error {
 		BEGIN
 			IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'diagrams' AND column_name = 'public') THEN
 				ALTER TABLE diagrams ADD COLUMN public BOOLEAN DEFAULT FALSE;
+			END IF;
+		END $$`,
+		`DO $$
+		BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'icon' AND data_type = 'character varying') THEN
+				ALTER TABLE services ALTER COLUMN icon TYPE TEXT;
 			END IF;
 		END $$`,
 	}
@@ -255,6 +262,16 @@ func (r *Repository) UpdateService(service *models.Service) error {
 	return err
 }
 
+func (r *Repository) GetServiceByID(id int) (*models.Service, error) {
+	query := `SELECT id, diagram_id, name, description, service_type, icon, host, port, tags, position_x, position_y, healthcheck_method, healthcheck_url, polling_interval, request_timeout, expected_status, status_mapping, http_method, headers, body, ssl_verify, follow_redirects, tcp_send_data, tcp_expect_data, udp_send_data, udp_expect_data, icmp_packet_count, dns_query_type, dns_expected_result, kafka_topic, kafka_client_id, current_status, last_checked, created_at, updated_at FROM services WHERE id = $1`
+	var s models.Service
+	err := r.db.QueryRow(query, id).Scan(&s.ID, &s.DiagramID, &s.Name, &s.Description, &s.ServiceType, &s.Icon, &s.Host, &s.Port, &s.Tags, &s.PositionX, &s.PositionY, &s.HealthcheckMethod, &s.HealthcheckURL, &s.PollingInterval, &s.RequestTimeout, &s.ExpectedStatus, &s.StatusMapping, &s.HTTPMethod, &s.Headers, &s.Body, &s.SSLVerify, &s.FollowRedirects, &s.TCPSendData, &s.TCPExpectData, &s.UDPSendData, &s.UDPExpectData, &s.ICMPPacketCount, &s.DNSQueryType, &s.DNSExpectedResult, &s.KafkaTopic, &s.KafkaClientID, &s.CurrentStatus, &s.LastChecked, &s.CreatedAt, &s.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
 func (r *Repository) UpdateServiceStatus(serviceID int, status models.ServiceStatus) error {
 	query := `UPDATE services SET current_status = $1, last_checked = CURRENT_TIMESTAMP WHERE id = $2`
 	_, err := r.db.Exec(query, status, serviceID)
@@ -374,6 +391,85 @@ func (r *Repository) GetUserByID(id int) (*models.User, error) {
 	return &u, nil
 }
 
+func (r *Repository) GetUsers() ([]models.User, error) {
+	query := `SELECT id, username, password_hash, email, role, created_at, updated_at FROM users ORDER BY created_at DESC`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		err := rows.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Email, &u.Role, &u.CreatedAt, &u.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+func (r *Repository) UpdateUser(user *models.User) error {
+	var query string
+	var err error
+
+	// Check if password hash is not empty (meaning it was set to be updated)
+	// We assume an empty string means "do not update password".
+	// The handler is responsible for ensuring the hash is only present if a new password was provided.
+	if user.PasswordHash != "" {
+		query = `UPDATE users SET email = $1, role = $2, password_hash = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`
+		_, err = r.db.Exec(query, user.Email, user.Role, user.PasswordHash, user.ID)
+	} else {
+		query = `UPDATE users SET email = $1, role = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+		_, err = r.db.Exec(query, user.Email, user.Role, user.ID)
+	}
+
+	return err
+}
+
+func (r *Repository) DeleteUser(id int) error {
+	query := `DELETE FROM users WHERE id = $1`
+	_, err := r.db.Exec(query, id)
+	return err
+}
+
 func (r *Repository) Close() error {
 	return r.db.Close()
+}
+
+// CheckFirstRun checks if this is the first run (no users exist)
+func (r *Repository) CheckFirstRun() (bool, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM users`
+	err := r.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
+// CreateFirstRunAdmin creates the first admin user
+func (r *Repository) CreateFirstRunAdmin(username, password, email string) (*models.User, error) {
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &models.User{
+		Username:     username,
+		PasswordHash: string(hashedPassword),
+		Email:        email,
+		Role:         models.RoleAdmin,
+	}
+
+	query := `INSERT INTO users (username, password_hash, email, role) VALUES ($1, $2, $3, $4) RETURNING id`
+	err = r.db.QueryRow(query, user.Username, user.PasswordHash, user.Email, user.Role).Scan(&user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

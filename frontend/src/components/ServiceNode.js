@@ -10,6 +10,7 @@ import {
   Cpu,
   Monitor
 } from 'lucide-react';
+import useStore from '../store/useStore';
 
 const iconMap = {
   api: Server,
@@ -26,8 +27,14 @@ const ServiceNode = ({ data, selected }) => {
   const { service } = data;
   const [prevStatus, setPrevStatus] = useState(service.current_status);
   const [shouldShake, setShouldShake] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const IconComponent = iconMap[service.service_type] || Server;
+
+  // Reset image error when service changes
+  useEffect(() => {
+    setImageError(false);
+  }, [service.icon]);
 
   // Trigger shake animation when status changes to dead
   useEffect(() => {
@@ -87,20 +94,31 @@ const ServiceNode = ({ data, selected }) => {
         <div className="relative z-10">
           {/* Header with icon and name */}
           <div className="flex items-center space-x-3 mb-3">
-            <div className="relative">
-              <IconComponent 
-                size={20} 
-                className={`
-                  transition-all duration-300 drop-shadow-lg
-                  ${service.current_status === 'alive' ? 'text-status-alive drop-shadow-[0_0_8px_rgba(0,255,136,0.8)]' : ''}
-                  ${service.current_status === 'dead' ? 'text-status-dead drop-shadow-[0_0_8px_rgba(255,51,102,0.8)]' : ''}
-                  ${service.current_status === 'degraded' ? 'text-status-degraded drop-shadow-[0_0_8px_rgba(255,170,0,0.8)]' : ''}
-                  ${service.current_status === 'checking' ? 'text-status-checking drop-shadow-[0_0_8px_rgba(0,170,255,0.8)]' : ''}
-                  ${service.current_status === 'unknown' ? 'text-status-unknown' : ''}
-                `}
-              />
+            <div className="relative group">
+              {/* Display custom icon if available, valid, and not empty, otherwise use default icon */}
+              {service.icon && service.icon.trim() !== '' && !imageError ? (
+                <img 
+                  src={service.icon} 
+                  alt={service.name}
+                  className="w-8 h-8 rounded-lg object-cover border-2 border-transparent group-hover:border-neon-blue transition-all duration-300"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <IconComponent 
+                  size={20} 
+                  className={`
+                    transition-all duration-300 drop-shadow-lg
+                    ${service.current_status === 'alive' ? 'text-status-alive drop-shadow-[0_0_8px_rgba(0,255,136,0.8)]' : ''}
+                    ${service.current_status === 'dead' ? 'text-status-dead drop-shadow-[0_0_8px_rgba(255,51,102,0.8)]' : ''}
+                    ${service.current_status === 'degraded' ? 'text-status-degraded drop-shadow-[0_0_8px_rgba(255,170,0,0.8)]' : ''}
+                    ${service.current_status === 'checking' ? 'text-status-checking drop-shadow-[0_0_8px_rgba(0,170,255,0.8)]' : ''}
+                    ${service.current_status === 'unknown' ? 'text-status-unknown' : ''}
+                  `}
+                />
+              )}
+              
               {/* Icon glow effect */}
-              {service.current_status === 'alive' && (
+              {service.current_status === 'alive' && (!service.icon || service.icon.trim() === '' || imageError) && (
                 <div className="absolute inset-0 animate-pulse-neon">
                   <IconComponent size={20} className="text-status-alive opacity-50 blur-sm" />
                 </div>
@@ -121,6 +139,22 @@ const ServiceNode = ({ data, selected }) => {
               </div>
             )}
           </div>
+
+          {/* Tags */}
+          {service.tags && service.tags.trim() !== '' && (
+            <div className="mb-3">
+              <div className="flex flex-wrap gap-1">
+                {service.tags.split(',').map((tag, index) => (
+                  <span 
+                    key={index}
+                    className="inline-block text-xs font-medium px-2 py-1 rounded-full bg-gradient-to-r from-purple-600/40 to-pink-600/40 text-purple-200 border border-purple-400/30 shadow-[0_0_8px_rgba(192,132,252,0.3)] backdrop-blur-sm transition-all duration-300 hover:from-purple-500/50 hover:to-pink-500/50 hover:border-purple-300/50 hover:shadow-[0_0_12px_rgba(192,132,252,0.5)] hover:scale-105"
+                  >
+                    #{tag.trim()}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Status */}
           <div className="flex items-center justify-between">

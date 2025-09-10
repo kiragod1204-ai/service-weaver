@@ -382,3 +382,159 @@ code {
   }
 }
 .animate-ultra-pulse { animation: ultra-pulse 1s ease-in-out infinite; }
+
+/* Loading and transition animations */
+@keyframes slide-up {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-up { animation: slide-up 0.4s ease-out; }
+
+@keyframes slide-down {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-down { animation: slide-down 0.4s ease-out; }
+
+@keyframes bounce-in {
+  0% { 
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% { 
+    transform: scale(0.9);
+  }
+  100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-bounce-in { animation: bounce-in 0.6s ease-out; }
+
+@keyframes shake-error {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+.animate-shake-error { animation: shake-error 0.6s ease-in-out; }
+
+@keyframes pulse-success {
+  0% { 
+    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7);
+  }
+  70% { 
+    box-shadow: 0 0 0 10px rgba(0, 255, 136, 0);
+  }
+  100% { 
+    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
+  }
+}
+.animate-pulse-success { animation: pulse-success 0.6s ease-out; }
+
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-flow { 
+  animation: gradient-flow 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float-subtle { animation: float-subtle 4s ease-in-out infinite; }
+
+@keyframes glow-breathing {
+  0%, 100% { 
+    filter: brightness(1) saturate(1);
+    transform: scale(1);
+  }
+  50% { 
+    filter: brightness(1.1) saturate(1.2);
+    transform: scale(1.02);
+  }
+}
+.animate-glow-breathing { animation: glow-breathing 3s ease-in-out infinite; }
+
+/* Loading spinner variations */
+@keyframes spin-dots {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-spin-dots { animation: spin-dots 1s linear infinite; }
+
+@keyframes pulse-ring {
+  0% { 
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% { 
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
+
+/* Enhanced delete button animations */
+@keyframes delete-button-pulse {
+  0%, 100% { 
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+.animate-delete-pulse { animation: delete-button-pulse 2s ease-in-out infinite; }
+
+@keyframes delete-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.4));
+  }
+  50% { 
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.8)) drop-shadow(0 0 20px rgba(239, 68, 68, 0.4));
+  }
+}
+.animate-delete-glow { animation: delete-glow 1.5s ease-in-out infinite; }
+
+/* Form field animations */
+@keyframes field-focus {
+  0% { 
+    border-color: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
+  }
+  50% { 
+    border-color: rgba(0, 255, 136, 0.8);
+    box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.2);
+  }
+  100% { 
+    border-color: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
+  }
+}
+.animate-field-focus { animation: field-focus 0.6s ease-out; }
+
+/* Smooth transitions for all interactive elements */
+.transition-all-300 { transition: all 0.3s ease; }
+.transition-transform-300 { transition: transform 0.3s ease; }
+.transition-colors-300 { transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease; }

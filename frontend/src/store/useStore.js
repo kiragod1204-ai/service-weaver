@@ -18,6 +18,7 @@ const useStore = create((set, get) => {
     user: null,
     token: token,
     isAuthenticated: !!token,
+    success: null,
     
     // Diagram state
     diagrams: [],
@@ -25,6 +26,7 @@ const useStore = create((set, get) => {
     services: [],
     connections: [],
     selectedService: null,
+    copiedService: null, // For copy/paste functionality
     isLoading: false,
     error: null,
     websocket: null,
@@ -37,7 +39,11 @@ const useStore = create((set, get) => {
     login: async (credentials) => {
       set({ isLoading: true, error: null });
       try {
-        const response = await axios.post(`${API_BASE}/login`, credentials);
+        const response = await axios.post(`${API_BASE}/login`, {
+          username: credentials.username,
+          password: credentials.password,
+          remember_me: credentials.rememberMe || false
+        });
         const { token, user } = response.data;
         
         // Store token in localStorage
@@ -50,13 +56,118 @@ const useStore = create((set, get) => {
           user, 
           token, 
           isAuthenticated: true, 
-          isLoading: false 
+          isLoading: false,
+          success: 'Successfully logged in!' 
         });
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          set({ success: null });
+        }, 3000);
         
         return user;
       } catch (error) {
+        let errorMessage = 'Login failed';
+        
+        if (error.response) {
+          // Server responded with error status
+          switch (error.response.status) {
+            case 400:
+              errorMessage = 'Invalid username or password';
+              break;
+            case 401:
+              errorMessage = 'Invalid credentials';
+              break;
+            case 429:
+              errorMessage = 'Too many login attempts. Please try again later.';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Login failed';
+          }
+        } else if (error.request) {
+          // Request made but no response received
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          // Something else happened
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
         set({ 
-          error: error.response?.data?.error || error.message, 
+          error: errorMessage, 
+          isLoading: false 
+        });
+        throw error;
+      }
+    },
+
+    // First-run admin setup
+    createFirstRunAdmin: async (adminData) => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await axios.post(`${API_BASE}/first-run-admin`, {
+          username: adminData.username,
+          password: adminData.password,
+          email: adminData.email
+        });
+        const { token, user, message } = response.data;
+        
+        // Store token in localStorage
+        localStorage.setItem('token', token);
+        
+        // Set axios default header for future requests
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        set({ 
+          user, 
+          token, 
+          isAuthenticated: true, 
+          isLoading: false,
+          success: message || 'Admin account created successfully!' 
+        });
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          set({ success: null });
+        }, 3000);
+        
+        return user;
+      } catch (error) {
+        let errorMessage = 'Failed to create admin account';
+        
+        if (error.response) {
+          // Server responded with error status
+          switch (error.response.status) {
+            case 400:
+              errorMessage = error.response.data?.error || 'Invalid admin data';
+              break;
+            case 409:
+              errorMessage = 'Admin account already exists';
+              break;
+            case 422:
+              errorMessage = 'Invalid email format or missing required fields';
+              break;
+            case 429:
+              errorMessage = 'Too many attempts. Please try again later.';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Failed to create admin account';
+          }
+        } else if (error.request) {
+          // Request made but no response received
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          // Something else happened
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
+        set({ 
+          error: errorMessage, 
           isLoading: false 
         });
         throw error;
@@ -79,13 +190,50 @@ const useStore = create((set, get) => {
           user, 
           token, 
           isAuthenticated: true, 
-          isLoading: false 
+          isLoading: false,
+          success: 'Account created successfully!' 
         });
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          set({ success: null });
+        }, 3000);
         
         return user;
       } catch (error) {
+        let errorMessage = 'Registration failed';
+        
+        if (error.response) {
+          // Server responded with error status
+          switch (error.response.status) {
+            case 400:
+              errorMessage = error.response.data?.error || 'Invalid registration data';
+              break;
+            case 409:
+              errorMessage = 'Username already exists';
+              break;
+            case 422:
+              errorMessage = 'Invalid email format or missing required fields';
+              break;
+            case 429:
+              errorMessage = 'Too many registration attempts. Please try again later.';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Registration failed';
+          }
+        } else if (error.request) {
+          // Request made but no response received
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          // Something else happened
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
         set({ 
-          error: error.response?.data?.error || error.message, 
+          error: errorMessage, 
           isLoading: false 
         });
         throw error;
@@ -106,8 +254,15 @@ const useStore = create((set, get) => {
         currentDiagram: null,
         services: [],
         connections: [],
-        selectedService: null
+        selectedService: null,
+        success: 'Successfully logged out!',
+        error: null
       });
+      
+      // Clear success message after 2 seconds
+      setTimeout(() => {
+        set({ success: null });
+      }, 2000);
     },
     
     // Initialize authentication state from localStorage
@@ -133,9 +288,165 @@ const useStore = create((set, get) => {
           set({ 
             token: null, 
             isAuthenticated: false,
-            user: null
+            user: null,
+            error: 'Session expired. Please log in again.'
           });
         }
+      }
+    },
+
+    // User management methods (admin only)
+    createUser: async (userData) => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await axios.post(`${API_BASE}/users`, userData);
+        set({ isLoading: false });
+        return response.data;
+      } catch (error) {
+        let errorMessage = 'Failed to create user';
+        
+        if (error.response) {
+          switch (error.response.status) {
+            case 400:
+              errorMessage = error.response.data?.error || 'Invalid user data';
+              break;
+            case 401:
+              errorMessage = 'Unauthorized access';
+              break;
+            case 403:
+              errorMessage = 'Admin privileges required';
+              break;
+            case 409:
+              errorMessage = 'Username already exists';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Failed to create user';
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
+        set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
+    },
+
+    getUsers: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await axios.get(`${API_BASE}/users`);
+        set({ isLoading: false });
+        return response.data;
+      } catch (error) {
+        let errorMessage = 'Failed to fetch users';
+        
+        if (error.response) {
+          switch (error.response.status) {
+            case 401:
+              errorMessage = 'Unauthorized access';
+              break;
+            case 403:
+              errorMessage = 'Admin privileges required';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Failed to fetch users';
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
+        set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
+    },
+
+    updateUser: async (userId, userData) => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await axios.put(`${API_BASE}/users/${userId}`, userData);
+        set({ isLoading: false });
+        return response.data;
+      } catch (error) {
+        let errorMessage = 'Failed to update user';
+        
+        if (error.response) {
+          switch (error.response.status) {
+            case 400:
+              errorMessage = error.response.data?.error || 'Invalid user data';
+              break;
+            case 401:
+              errorMessage = 'Unauthorized access';
+              break;
+            case 403:
+              errorMessage = 'Admin privileges required';
+              break;
+            case 404:
+              errorMessage = 'User not found';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Failed to update user';
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
+        set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
+    },
+
+    deleteUser: async (userId) => {
+      set({ isLoading: true, error: null });
+      try {
+        await axios.delete(`${API_BASE}/users/${userId}`);
+        set({ isLoading: false });
+        return true;
+      } catch (error) {
+        let errorMessage = 'Failed to delete user';
+        
+        if (error.response) {
+          switch (error.response.status) {
+            case 400:
+              errorMessage = error.response.data?.error || 'Cannot delete user';
+              break;
+            case 401:
+              errorMessage = 'Unauthorized access';
+              break;
+            case 403:
+              errorMessage = 'Admin privileges required';
+              break;
+            case 404:
+              errorMessage = 'User not found';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Failed to delete user';
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
+        set({ error: errorMessage, isLoading: false });
+        throw error;
       }
     },
     
@@ -337,6 +648,64 @@ const useStore = create((set, get) => {
       }
     },
 
+    updateServiceIcon: async (serviceId, iconData) => {
+      set({ isLoading: true, error: null });
+      try {
+        const formData = new FormData();
+        formData.append('icon', iconData);
+        
+        const response = await axios.post(`${API_BASE}/services/${serviceId}/icon`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        const { services } = get();
+        const updatedServices = services.map(s => 
+          s.id === serviceId ? { ...s, icon: response.data.icon } : s
+        );
+        
+        set({ 
+          services: updatedServices, 
+          selectedService: updatedServices.find(s => s.id === serviceId),
+          isLoading: false 
+        });
+        
+        return response.data;
+      } catch (error) {
+        let errorMessage = 'Failed to upload icon';
+        
+        if (error.response) {
+          switch (error.response.status) {
+            case 400:
+              errorMessage = error.response.data?.error || 'Invalid file format or size';
+              break;
+            case 401:
+              errorMessage = 'Unauthorized access';
+              break;
+            case 404:
+              errorMessage = 'Service not found';
+              break;
+            case 413:
+              errorMessage = 'File size exceeds limit';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = error.response.data?.error || 'Failed to upload icon';
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred';
+        }
+        
+        set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
+    },
+
     deleteService: async (serviceId) => {
       set({ isLoading: true, error: null });
       try {
@@ -407,6 +776,51 @@ const useStore = create((set, get) => {
 
     // UI state
     setSelectedService: (service) => set({ selectedService: service }),
+    setCopiedService: (service) => set({ copiedService: service }),
+
+    // Copy/Paste functionality
+    pasteService: async () => {
+      const { copiedService, currentDiagram, createService } = get();
+      if (!copiedService || !currentDiagram) {
+        console.error('No service copied or no diagram loaded');
+        return;
+      }
+
+      // Offset the position for the new service
+      const newPosition = {
+        x: copiedService.position_x + 50, // Offset by 50px
+        y: copiedService.position_y + 50, // Offset by 50px
+      };
+
+      // Create a new service object based on the copied one
+      const newServiceData = {
+        diagram_id: currentDiagram.id,
+        name: `${copiedService.name} (Copy)`,
+        description: copiedService.description,
+        service_type: copiedService.service_type,
+        icon: copiedService.icon,
+        host: copiedService.host,
+        port: copiedService.port,
+        tags: copiedService.tags,
+        position_x: newPosition.x,
+        position_y: newPosition.y,
+        healthcheck_url: copiedService.healthcheck_url,
+        polling_interval: copiedService.polling_interval,
+        request_timeout: copiedService.request_timeout,
+        expected_status: copiedService.expected_status,
+        status_mapping: copiedService.status_mapping,
+      };
+
+      try {
+        const newService = await createService(newServiceData);
+        set({ selectedService: newService }); // Select the newly pasted service
+        return newService;
+      } catch (error) {
+        console.error('Failed to paste service:', error);
+        set({ error: 'Failed to paste service. Please try again.' });
+        throw error;
+      }
+    },
     
     updateServicePosition: (serviceId, position) => {
       const { services } = get();

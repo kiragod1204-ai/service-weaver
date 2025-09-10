@@ -56,7 +56,7 @@ func main() {
 	{
 		// Authentication routes (no auth required)
 		api.POST("/login", handlers.Login)
-		api.POST("/register", handlers.Register)
+		api.POST("/first-run-admin", handlers.FirstRunAdmin)
 
 		// Public monitoring routes (no auth required for read-only access)
 		public := api.Group("/")
@@ -74,6 +74,17 @@ func main() {
 			// User routes
 			protected.GET("/user/me", handlers.GetCurrentUser)
 
+			// Admin-only routes
+			admin := protected.Group("/")
+			admin.Use(middleware.RequireAdmin())
+			{
+				// User management routes (admin only)
+				admin.POST("/users", handlers.CreateUser)
+				admin.GET("/users", handlers.GetUsers)
+				admin.PUT("/users/:id", handlers.UpdateUser)
+				admin.DELETE("/users/:id", handlers.DeleteUser)
+			}
+
 			// Diagram routes
 			protected.POST("/diagrams", handlers.CreateDiagram)
 			protected.GET("/diagrams", handlers.GetDiagrams)
@@ -85,6 +96,7 @@ func main() {
 			protected.POST("/services", handlers.CreateService)
 			protected.PUT("/services/:id", handlers.UpdateService)
 			protected.DELETE("/services/:id", handlers.DeleteService)
+			protected.POST("/services/:id/icon", handlers.UploadServiceIcon)
 
 			// Connection routes
 			protected.POST("/connections", handlers.CreateConnection)

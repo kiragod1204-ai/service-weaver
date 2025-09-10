@@ -1,12 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2, Activity } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Save, Trash2, Activity, Upload, ChevronDown, ChevronRight } from 'lucide-react';
 import useStore from '../store/useStore';
 
+const CollapsibleSection = ({ title, icon, defaultOpen = true, children, className = '' }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className={`bg-gradient-to-br from-slate-800/60 via-purple-900/30 to-slate-700/60 rounded-xl border border-purple-500/20 backdrop-blur-sm relative overflow-hidden ${className}`}>
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/3 to-pink-500/5 animate-pulse"></div>
+      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent"></div>
+      
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-4 flex items-center justify-between text-left relative z-10 hover:bg-slate-700/30 transition-colors duration-200 rounded-t-xl"
+      >
+        <h4 className="text-sm font-medium bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent flex items-center">
+          {icon && <span className="mr-2">{icon}</span>}
+          {title}
+        </h4>
+        {isOpen ? (
+          <ChevronDown size={18} className="text-slate-400 transition-transform duration-200" />
+        ) : (
+          <ChevronRight size={18} className="text-slate-400 transition-transform duration-200" />
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="px-4 pb-4 relative z-10">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const InspectorPanel = () => {
-  const { selectedService, updateService, deleteService, setSelectedService } = useStore();
+  const { selectedService, updateService, deleteService, setSelectedService, updateServiceIcon } = useStore();
   const [formData, setFormData] = useState({});
   const [statusMapping, setStatusMapping] = useState('');
   const [healthCheckMethod, setHealthCheckMethod] = useState('HTTP');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (selectedService) {
@@ -114,6 +150,72 @@ const InspectorPanel = () => {
     }
   };
 
+  // Handle file selection
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  // Handle icon upload
+  const handleIconUpload = async () => {
+    if (!selectedFile || !selectedService) return;
+
+    setUploading(true);
+    try {
+      const result = await updateServiceIcon(selectedService.id, selectedFile);
+      
+      // Update the selected service with the new icon
+      setSelectedService({
+        ...selectedService,
+        icon: result.icon
+      });
+      
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error uploading icon:', error);
+      // Error is already handled by the store and displayed to the user
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Cancel icon upload
+  const cancelIconUpload = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Clean up preview URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   if (!selectedService) {
     return (
       <div className="w-80 bg-gradient-to-br from-slate-900/90 via-purple-900/20 to-slate-800/90 border-l border-gradient-to-b from-cyan-400/30 to-purple-500/30 p-4 backdrop-blur-xl relative overflow-hidden">
@@ -200,14 +302,8 @@ const InspectorPanel = () => {
         </div>
 
         {/* Basic Info */}
-        <div className="bg-gradient-to-br from-slate-800/60 via-purple-900/30 to-slate-700/60 rounded-xl p-4 border border-purple-500/20 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/3 to-pink-500/5 animate-pulse"></div>
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent"></div>
-          
-          <h4 className="text-sm font-medium bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent mb-4 relative z-10">
-            Basic Information
-          </h4>
-          <div className="space-y-4 relative z-10">
+        <CollapsibleSection title="Basic Information" defaultOpen={false}>
+          <div className="space-y-4">
             <div>
               <label className="block text-xs text-slate-300/80 mb-2 font-medium">Name</label>
               <input
@@ -253,18 +349,105 @@ const InspectorPanel = () => {
                 className="w-full bg-gradient-to-r from-slate-800/80 to-slate-700/80 border border-cyan-500/30 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 backdrop-blur-sm transition-all duration-300 hover:border-cyan-400/40 placeholder:text-slate-400/60"
               />
             </div>
+
+            {/* Icon Upload Section */}
+            <div>
+              <label className="block text-xs text-slate-300/80 mb-2 font-medium">Service Icon</label>
+              <div className="space-y-3">
+                {/* Current Icon Display */}
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-lg border-2 border-cyan-500/30 bg-slate-800/50 flex items-center justify-center overflow-hidden">
+                    {selectedService.icon && selectedService.icon.trim() !== '' ? (
+                      <img 
+                        src={selectedService.icon} 
+                        alt={selectedService.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-cyan-400 text-xl">
+                        {formData.service_type === 'api' && '🔌'}
+                        {formData.service_type === 'database' && '🗄️'}
+                        {formData.service_type === 'cache' && '⚡'}
+                        {formData.service_type === 'queue' && '📬'}
+                        {formData.service_type === 'web' && '🌐'}
+                        {formData.service_type === 'service' && '⚙️'}
+                        {formData.service_type === 'compute' && '💻'}
+                        {formData.service_type === 'monitor' && '📊'}
+                        {!formData.service_type && '🔌'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-400">
+                      {selectedService.icon && selectedService.icon.trim() !== '' ? 'Custom icon uploaded' : 'Default icon'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* File Input */}
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*"
+                    className="hidden"
+                    id="icon-upload"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center space-x-2 p-3 border border-cyan-500/30 rounded-lg text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400/50 transition-all duration-300"
+                  >
+                    <Upload size={16} />
+                    <span className="text-sm font-medium">
+                      {selectedFile ? selectedFile.name : 'Choose new icon'}
+                    </span>
+                  </button>
+                  <p className="text-xs text-slate-400 mt-1">Max size: 5MB. Supported formats: JPG, PNG, GIF</p>
+                </div>
+
+                {/* Preview and Actions */}
+                {(selectedFile || previewUrl) && (
+                  <div className="space-y-3 p-3 border border-cyan-500/20 rounded-lg bg-slate-800/30">
+                    {previewUrl && (
+                      <div>
+                        <p className="text-xs text-slate-300 mb-2">Preview:</p>
+                        <div className="flex justify-center">
+                          <img 
+                            src={previewUrl} 
+                            alt="Preview" 
+                            className="w-16 h-16 object-cover rounded-lg border border-cyan-500/30"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleIconUpload}
+                        disabled={!selectedFile || uploading}
+                        className="flex-1 py-2 px-3 bg-cyan-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-500 transition-colors"
+                      >
+                        {uploading ? 'Uploading...' : 'Upload Icon'}
+                      </button>
+                      <button
+                        onClick={cancelIconUpload}
+                        className="py-2 px-3 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-500 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Connectivity */}
-        <div className="bg-gradient-to-br from-slate-800/60 via-blue-900/30 to-slate-700/60 rounded-xl p-4 border border-blue-500/20 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 to-cyan-500/5 animate-pulse"></div>
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent"></div>
-          
-          <h4 className="text-sm font-medium bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent mb-4 relative z-10">
-            🌐 Connectivity
-          </h4>
-          <div className="space-y-4 relative z-10">
+        <CollapsibleSection title="🌐 Connectivity" defaultOpen={false} className="border-blue-500/20">
+          <div className="space-y-4">
             <div>
               <label className="block text-xs text-slate-300/80 mb-2 font-medium">Host</label>
               <input
@@ -285,17 +468,11 @@ const InspectorPanel = () => {
               />
             </div>
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Healthcheck */}
-        <div className="bg-gradient-to-br from-slate-800/60 via-emerald-900/30 to-slate-700/60 rounded-xl p-4 border border-emerald-500/20 backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/3 to-green-500/5 animate-pulse"></div>
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent"></div>
-          
-          <h4 className="text-sm font-medium bg-gradient-to-r from-emerald-300 to-green-300 bg-clip-text text-transparent mb-4 relative z-10">
-            ⚡ Health Check Configuration
-          </h4>
-          <div className="space-y-4 relative z-10">
+        <CollapsibleSection title="⚡ Health Check Configuration" defaultOpen={false} className="border-emerald-500/20">
+          <div className="space-y-4">
             {/* Health Check Method Selector */}
             <div>
               <label className="block text-xs text-slate-300/80 mb-2 font-medium">Health Check Method</label>
@@ -305,7 +482,7 @@ const InspectorPanel = () => {
                   setHealthCheckMethod(e.target.value);
                   handleInputChange('healthcheck_method', e.target.value);
                 }}
-                className="w-full bg-slate-800/90 border border-emerald-500/30 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20 backdrop-blur-sm transition-all duration-300 hover:border-emerald-400/40"
+                className="w-full bg-white border border-emerald-500/30 rounded-lg px-4 py-3 text-black text-sm focus:outline-none focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20 backdrop-blur-sm transition-all duration-300 hover:border-emerald-400/40"
               >
                 <option value="HTTP">🌐 HTTP</option>
                 <option value="HTTPS">🔒 HTTPS</option>
@@ -621,7 +798,7 @@ const InspectorPanel = () => {
               </p>
             </div>
           </div>
-        </div>
+        </CollapsibleSection>
       </div>
 
       {/* Actions */}

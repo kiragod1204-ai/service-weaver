@@ -128,30 +128,102 @@ const ServiceEdge = ({
           />
         </circle>
 
-        {/* Delete button - only shows in edit mode */}
+        {/* Enhanced Delete button - only shows in edit mode */}
         {!isMonitoring && (selected || isHovered) && (
           <g
             transform={`translate(${midX}, ${midY})`}
-            className="cursor-pointer"
+            className="cursor-pointer group"
             onClick={handleDelete}
           >
-            {/* Background circle for delete button */}
+            {/* Outer glow effect */}
             <circle
-              r="16"
-              fill="#ef4444"
+              r="20"
+              fill="url(#deleteGradient)"
+              stroke="rgba(239, 68, 68, 0.8)"
+              strokeWidth="1"
+              className="opacity-0 group-hover:opacity-100 transition-all duration-300 animate-delete-pulse"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.6))' }}
+            />
+            
+            {/* Main background circle */}
+            <circle
+              r="14"
+              fill="url(#deleteGradient)"
               stroke="#ffffff"
               strokeWidth="2"
-              className="hover:opacity-80 transition-all duration-200"
+              className="transition-all duration-300 group-hover:scale-110"
+              style={{ 
+                filter: 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.4))',
+                transform: 'scale(1)'
+              }}
             />
-            {/* X icon */}
-            <X
-              size={16}
-              color="#ffffff"
-              className="pointer-events-none"
-              style={{ transform: 'translate(-8px, -8px)' }}
+            
+            {/* Inner highlight circle */}
+            <circle
+              r="10"
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.6)"
+              strokeWidth="1"
+              className="transition-all duration-300 group-hover:opacity-100"
+              style={{ opacity: '0.3' }}
             />
+            
+            {/* Enhanced X icon with animation */}
+            <g
+              className="transition-all duration-300 group-hover:rotate-90"
+              style={{ transform: 'translate(-6px, -6px)' }}
+            >
+              <X
+                size={12}
+                color="#ffffff"
+                className="pointer-events-none drop-shadow-lg"
+              />
+            </g>
+            
+            {/* Tooltip background */}
+            <g
+              className="opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+              style={{ transform: 'translate(-30px, -40px)' }}
+            >
+              <rect
+                x="0"
+                y="0"
+                width="60"
+                height="20"
+                rx="4"
+                fill="rgba(0, 0, 0, 0.9)"
+                stroke="rgba(239, 68, 68, 0.8)"
+                strokeWidth="1"
+              />
+              <text
+                x="30"
+                y="14"
+                textAnchor="middle"
+                fill="#ffffff"
+                fontSize="10"
+                fontWeight="bold"
+                fontFamily="monospace"
+              >
+                DELETE
+              </text>
+            </g>
           </g>
         )}
+        
+        {/* Gradient definitions */}
+        <defs>
+          <linearGradient id="deleteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="50%" stopColor="#dc2626" />
+            <stop offset="100%" stopColor="#b91c1c" />
+          </linearGradient>
+          
+          {/* Additional gradient for hover effects */}
+          <radialGradient id="deleteGlow">
+            <stop offset="0%" stopColor="rgba(239, 68, 68, 0.8)" />
+            <stop offset="100%" stopColor="rgba(239, 68, 68, 0)" />
+          </radialGradient>
+        </defs>
       </g>
     </>
   );

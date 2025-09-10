@@ -31,7 +31,31 @@ func RequireRole(role models.UserRole) gin.HandlerFunc {
 
 // RequireAdmin is a shortcut for RequireRole(models.RoleAdmin)
 func RequireAdmin() gin.HandlerFunc {
-	return RequireRole(models.RoleAdmin)
+	return func(c *gin.Context) {
+		userRoleValue, exists := c.Get("user_role")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+			c.Abort()
+			return
+		}
+
+		userRole, ok := userRoleValue.(models.UserRole)
+		if !ok {
+			// If type assertion fails, it means the role in the context is not a UserRole.
+			// This indicates a potential issue upstream (e.g., in AuthMiddleware).
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error: Invalid user role type in context"})
+			c.Abort()
+			return
+		}
+
+		if userRole != models.RoleAdmin {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }
 
 // OptionalAuth is a middleware that checks for a token but doesn't require it
