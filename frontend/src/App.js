@@ -82,9 +82,6 @@ const DiagramListView = () => {
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-neon-purple/10 rounded-full blur-3xl animate-float" style={{animationDelay: '4s'}}></div>
       </div>
       
-      {/* Sidebar */}
-      <Sidebar />
-      
       {/* Main Content */}
       <div className="flex-1 flex flex-col relative z-10">
         {/* Header */}
