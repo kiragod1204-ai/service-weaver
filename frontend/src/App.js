@@ -391,9 +391,7 @@ function App() {
     connectWebSocket, 
     fetchDiagrams,
     isAuthenticated,
-    initAuth,
-    logout,
-    user
+    initAuth
   } = useStore();
   
   const [showScrollTop, setShowScrollTop] = useState(false);

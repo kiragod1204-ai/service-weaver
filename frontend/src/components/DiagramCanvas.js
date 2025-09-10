@@ -13,7 +13,6 @@ import 'reactflow/dist/style.css';
 import useStore from '../store/useStore';
 import ServiceNode from './ServiceNode';
 import ServiceEdge from './ServiceEdge';
-import { Copy } from 'lucide-react';
 
 const nodeTypes = {
   service: ServiceNode,
@@ -49,7 +48,6 @@ const DiagramCanvas = () => {
   const escapePressed = useKeyPress('Escape');
   const ctrlCPressed = useKeyPress(['Control+c', 'Meta+c']); // For Windows/Linux and macOS
   const ctrlVPressed = useKeyPress(['Control+v', 'Meta+v']); // For Windows/Linux and macOS
-  const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
   // Convert services to React Flow nodes

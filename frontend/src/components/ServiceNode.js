@@ -10,7 +10,6 @@ import {
   Cpu,
   Monitor
 } from 'lucide-react';
-import useStore from '../store/useStore';
 
 const iconMap = {
   api: Server,

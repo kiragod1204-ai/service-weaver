@@ -6,14 +6,13 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   ConnectionLineType,
-  ReactFlowProvider,
   useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import useStore from '../store/useStore';
 import ServiceNode from './ServiceNode';
 import ServiceEdge from './ServiceEdge';
-import { RefreshCw, Settings, Play, Pause } from 'lucide-react';
+import { RefreshCw, Play, Pause } from 'lucide-react';
 
 const nodeTypes = {
   service: ServiceNode,
@@ -86,7 +85,7 @@ const MonitoringCanvas = ({ diagramId }) => {
         loadDiagramPublic(diagramId);
       }
     }
-  }, [diagramId, isAuthenticated]);
+  }, [diagramId, isAuthenticated, loadDiagram, connectWebSocket]);
 
   // Load positions from localStorage after services are loaded
   useEffect(() => {
@@ -188,7 +187,7 @@ const MonitoringCanvas = ({ diagramId }) => {
         clearInterval(intervalId);
       }
     };
-  }, [autoReloadEnabled, autoReloadInterval, diagramId]);
+  }, [autoReloadEnabled, autoReloadInterval, diagramId, handleManualReload]);
 
   // Manual reload function
   const handleManualReload = useCallback(() => {
@@ -209,7 +208,7 @@ const MonitoringCanvas = ({ diagramId }) => {
       setIsReloading(false);
       setLastUpdate(Date.now());
     }, 1000);
-  }, [diagramId, isAuthenticated, isReloading]);
+  }, [diagramId, isAuthenticated, isReloading, loadDiagram]);
 
   // Toggle auto-reload
   const toggleAutoReload = useCallback(() => {

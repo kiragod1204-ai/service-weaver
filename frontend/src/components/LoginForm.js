@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useStore from '../store/useStore';
-import { Eye, EyeOff, User, Lock, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 const LoginForm = () => {
   const [username, setUsername] = useState('');

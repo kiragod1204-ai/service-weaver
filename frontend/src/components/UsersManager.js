@@ -3,7 +3,7 @@ import useStore from '../store/useStore';
 import { Users, UserPlus, Edit2, Trash2, Shield, User as UserIcon } from 'lucide-react';
 
 const UsersManager = () => {
-  const { user, getUsers, updateUser, deleteUser, createUser, isLoading, error } = useStore();
+  const { user, getUsers, updateUser, deleteUser, createUser, isLoading } = useStore();
   const [users, setUsers] = useState([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
